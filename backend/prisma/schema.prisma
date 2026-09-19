@@ -1,5 +1,11 @@
-// ⚠️  Replace this file with your schema.prisma once you provide it.
-// This is a minimal placeholder so Prisma CLI commands work.
+// =====================================================================
+// Restaurant POS - MVP schema (multi-tenant, PostgreSQL)
+// Conventions:
+//  - Every business table has tenantId (one row in Tenant = one restaurant)
+//  - Money is stored in centimes as Int (1 MAD = 100 centimes)
+//  - Menu prices are TTC (VAT included); vatCents is the VAT contained in the total
+//  - Order ids are UUIDs that the client can generate (safe offline sync later)
+// =====================================================================
 
 generator client {
   provider = "prisma-client-js"
@@ -8,4 +14,309 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  OWNER
+  CASHIER
+  WAITER
+  KITCHEN
+}
+
+enum OrderType {
+  DINE_IN
+  TAKEAWAY
+  DELIVERY
+}
+
+enum OrderStatus {
+  OPEN
+  SENT // sent to kitchen
+  READY
+  PAID
+  CANCELLED
+}
+
+enum ItemStatus {
+  PENDING
+  PREPARING
+  READY
+  SERVED
+  VOIDED
+}
+
+enum Station {
+  KITCHEN
+  BAR
+}
+
+enum PaymentMethod {
+  CASH
+  CARD // recorded only, the TPE terminal is separate
+  OTHER
+}
+
+enum CashMovementType {
+  IN
+  OUT
+}
+
+// ---------- Tenant & users ----------
+
+model Tenant {
+  id              String   @id @default(uuid())
+  name            String
+  legalName       String?
+  ice             String? // Identifiant Commun de l'Entreprise (printed on receipts)
+  phone           String?
+  address         String?
+  city            String?
+  currency        String   @default("MAD")
+  vatRate         Decimal  @default(10.00) @db.Decimal(4, 2) // percent, restaurant default
+  receiptFooter   String?
+  nextOrderNumber Int      @default(1)
+  createdAt       DateTime @default(now())
+
+  users           User[]
+  categories      Category[]
+  products        Product[]
+  modifierGroups  ModifierGroup[]
+  tables          DiningTable[]
+  orders          Order[]
+  payments        Payment[]
+  shifts          Shift[]
+  cashMovements   CashMovement[]
+}
+
+model User {
+  id           String   @id @default(uuid())
+  tenantId     String
+  name         String
+  role         Role
+  email        String?
+  passwordHash String? // owner / back-office login
+  pinHash      String? // fast PIN login for waiters and cashiers
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  orders        Order[]
+  payments      Payment[]
+  shiftsOpened  Shift[]        @relation("ShiftOpenedBy")
+  shiftsClosed  Shift[]        @relation("ShiftClosedBy")
+  cashMovements CashMovement[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+// ---------- Menu ----------
+
+model Category {
+  id        String  @id @default(uuid())
+  tenantId  String
+  nameFr    String
+  nameAr    String?
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  products Product[]
+
+  @@index([tenantId])
+}
+
+model Product {
+  id         String  @id @default(uuid())
+  tenantId   String
+  categoryId String
+  nameFr     String
+  nameAr     String?
+  priceCents Int // TTC
+  imageUrl   String?
+  station    Station @default(KITCHEN) // where the ticket goes
+  available  Boolean @default(true) // toggle "out of stock" quickly
+  sortOrder  Int     @default(0)
+
+  tenant         Tenant                 @relation(fields: [tenantId], references: [id])
+  category       Category               @relation(fields: [categoryId], references: [id])
+  modifierGroups ProductModifierGroup[]
+  orderItems     OrderItem[]
+
+  @@index([tenantId])
+  @@index([categoryId])
+}
+
+// e.g. group "Sans ..." (multiple) or "Taille" (single, required)
+model ModifierGroup {
+  id       String  @id @default(uuid())
+  tenantId String
+  nameFr   String
+  nameAr   String?
+  required Boolean @default(false)
+  multiple Boolean @default(false)
+
+  tenant    Tenant                 @relation(fields: [tenantId], references: [id])
+  modifiers Modifier[]
+  products  ProductModifierGroup[]
+
+  @@index([tenantId])
+}
+
+model Modifier {
+  id              String  @id @default(uuid())
+  groupId         String
+  nameFr          String
+  nameAr          String?
+  priceDeltaCents Int     @default(0)
+  sortOrder       Int     @default(0)
+
+  group ModifierGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+}
+
+model ProductModifierGroup {
+  productId String
+  groupId   String
+
+  product Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  group   ModifierGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([productId, groupId])
+}
+
+// ---------- Floor ----------
+
+model DiningTable {
+  id       String  @id @default(uuid())
+  tenantId String
+  name     String // "T1", "Salon 2", "Terrasse 3"
+  zone     String?
+  seats    Int     @default(4)
+  active   Boolean @default(true)
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  orders Order[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+// ---------- Orders ----------
+
+model Order {
+  id              String      @id @default(uuid()) // client may supply the UUID
+  tenantId        String
+  number          Int // sequential per tenant, shown on tickets
+  type            OrderType   @default(DINE_IN)
+  status          OrderStatus @default(OPEN)
+  tableId         String?
+  waiterId        String?
+  shiftId         String?
+  customerName    String?
+  customerPhone   String?
+  deliveryAddress String?
+  note            String?
+  subtotalCents   Int         @default(0)
+  discountCents   Int         @default(0)
+  totalCents      Int         @default(0) // TTC amount to pay
+  vatCents        Int         @default(0) // VAT contained in totalCents
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  closedAt        DateTime?
+
+  tenant   Tenant       @relation(fields: [tenantId], references: [id])
+  table    DiningTable? @relation(fields: [tableId], references: [id])
+  waiter   User?        @relation(fields: [waiterId], references: [id])
+  shift    Shift?       @relation(fields: [shiftId], references: [id])
+  items    OrderItem[]
+  payments Payment[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+}
+
+model OrderItem {
+  id             String     @id @default(uuid())
+  orderId        String
+  productId      String?
+  // snapshots: keep history correct even if the menu changes later
+  nameFr         String
+  nameAr         String?
+  unitPriceCents Int
+  quantity       Int        @default(1)
+  modifiers      Json? // [{ nameFr, nameAr, priceDeltaCents }]
+  note           String?
+  station        Station    @default(KITCHEN)
+  status         ItemStatus @default(PENDING)
+  sentAt         DateTime? // when sent to kitchen
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([status, station])
+}
+
+// ---------- Payments & cash register ----------
+
+model Payment {
+  id            String        @id @default(uuid())
+  tenantId      String
+  orderId       String
+  cashierId     String?
+  method        PaymentMethod
+  amountCents   Int // amount applied to the bill
+  receivedCents Int? // cash handed by customer
+  changeCents   Int? // cash returned
+  createdAt     DateTime      @default(now())
+
+  tenant  Tenant @relation(fields: [tenantId], references: [id])
+  order   Order  @relation(fields: [orderId], references: [id])
+  cashier User?  @relation(fields: [cashierId], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([orderId])
+}
+
+// A cash register session: open in the morning, close in the evening (Z report)
+model Shift {
+  id                 String    @id @default(uuid())
+  tenantId           String
+  openedById         String
+  closedById         String?
+  openedAt           DateTime  @default(now())
+  closedAt           DateTime?
+  openingFloatCents  Int       @default(0)
+  expectedCashCents  Int? // computed at close
+  countedCashCents   Int? // physically counted by cashier
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  openedBy      User           @relation("ShiftOpenedBy", fields: [openedById], references: [id])
+  closedBy      User?          @relation("ShiftClosedBy", fields: [closedById], references: [id])
+  orders        Order[]
+  cashMovements CashMovement[]
+
+  @@index([tenantId, openedAt])
+}
+
+model CashMovement {
+  id          String           @id @default(uuid())
+  tenantId    String
+  shiftId     String
+  createdById String?
+  type        CashMovementType
+  amountCents Int
+  reason      String // "achat pain", "avance", ...
+  createdAt   DateTime         @default(now())
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id])
+  shift     Shift  @relation(fields: [shiftId], references: [id])
+  createdBy User?  @relation(fields: [createdById], references: [id])
+
+  @@index([shiftId])
 }
