@@ -1,0 +1,33 @@
+{
+  "login": {
+    "title": "Connexion",
+    "email": "Email",
+    "pin": "Code PIN",
+    "submit": "Se connecter",
+    "error": "Identifiants incorrects"
+  },
+  "nav": {
+    "pos": "Caisse",
+    "kitchen": "Cuisine",
+    "admin": "Administration",
+    "logout": "Déconnexion"
+  },
+  "pos": {
+    "tables": "Tables",
+    "takeaway": "À emporter",
+    "newOrder": "Nouvelle commande"
+  },
+  "kitchen": {
+    "title": "Écran cuisine",
+    "pending": "En attente",
+    "inProgress": "En cours",
+    "done": "Terminé"
+  },
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue"
+  }
+}

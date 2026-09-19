@@ -1,0 +1,11 @@
+// ⚠️  Replace this file with your schema.prisma once you provide it.
+// This is a minimal placeholder so Prisma CLI commands work.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
