@@ -1,16 +1,44 @@
 {
+  "setup": {
+    "title": "Configuration du restaurant",
+    "slugLabel": "Code du restaurant",
+    "slugPlaceholder": "ex: dar-fes",
+    "slugHelp": "Ce code vous est fourni par l'administrateur.",
+    "confirm": "Confirmer",
+    "change": "Changer de restaurant"
+  },
   "login": {
     "title": "Connexion",
+    "ownerTab": "Propriétaire",
+    "staffTab": "Personnel",
     "email": "Email",
+    "password": "Mot de passe",
     "pin": "Code PIN",
     "submit": "Se connecter",
-    "error": "Identifiants incorrects"
+    "back": "Retour",
+    "error": "Identifiants incorrects",
+    "selectStaff": "Choisissez votre nom"
   },
   "nav": {
     "pos": "Caisse",
     "kitchen": "Cuisine",
     "admin": "Administration",
     "logout": "Déconnexion"
+  },
+  "admin": {
+    "title": "Administration",
+    "menu": "Menu",
+    "categories": "Catégories",
+    "products": "Produits",
+    "addCategory": "Ajouter une catégorie",
+    "addProduct": "Ajouter un produit",
+    "nameFr": "Nom (français)",
+    "nameAr": "Nom (arabe)",
+    "price": "Prix (MAD)",
+    "category": "Catégorie",
+    "station": "Station",
+    "available": "Disponible",
+    "active": "Actif"
   },
   "pos": {
     "tables": "Tables",
@@ -27,7 +55,10 @@
     "save": "Enregistrer",
     "cancel": "Annuler",
     "delete": "Supprimer",
+    "edit": "Modifier",
     "loading": "Chargement...",
-    "error": "Une erreur est survenue"
+    "error": "Une erreur est survenue",
+    "yes": "Oui",
+    "no": "Non"
   }
 }

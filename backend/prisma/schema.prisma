@@ -67,6 +67,7 @@ enum CashMovementType {
 
 model Tenant {
   id              String   @id @default(uuid())
+  slug            String   @unique // short restaurant code, e.g. "dar-fes"
   name            String
   legalName       String?
   ice             String? // Identifiant Commun de l'Entreprise (printed on receipts)

@@ -1,16 +1,44 @@
 {
+  "setup": {
+    "title": "إعداد المطعم",
+    "slugLabel": "رمز المطعم",
+    "slugPlaceholder": "مثال: dar-fes",
+    "slugHelp": "هذا الرمز يزودك به المسؤول.",
+    "confirm": "تأكيد",
+    "change": "تغيير المطعم"
+  },
   "login": {
     "title": "تسجيل الدخول",
+    "ownerTab": "المالك",
+    "staffTab": "الموظفون",
     "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
     "pin": "رمز PIN",
     "submit": "دخول",
-    "error": "بيانات الدخول غير صحيحة"
+    "back": "رجوع",
+    "error": "بيانات الدخول غير صحيحة",
+    "selectStaff": "اختر اسمك"
   },
   "nav": {
     "pos": "الصندوق",
     "kitchen": "المطبخ",
     "admin": "الإدارة",
     "logout": "خروج"
+  },
+  "admin": {
+    "title": "الإدارة",
+    "menu": "القائمة",
+    "categories": "الفئات",
+    "products": "المنتجات",
+    "addCategory": "إضافة فئة",
+    "addProduct": "إضافة منتج",
+    "nameFr": "الاسم (فرنسي)",
+    "nameAr": "الاسم (عربي)",
+    "price": "السعر (درهم)",
+    "category": "الفئة",
+    "station": "المحطة",
+    "available": "متوفر",
+    "active": "نشط"
   },
   "pos": {
     "tables": "الطاولات",
@@ -27,7 +55,10 @@
     "save": "حفظ",
     "cancel": "إلغاء",
     "delete": "حذف",
+    "edit": "تعديل",
     "loading": "جار التحميل...",
-    "error": "حدث خطأ ما"
+    "error": "حدث خطأ ما",
+    "yes": "نعم",
+    "no": "لا"
   }
 }

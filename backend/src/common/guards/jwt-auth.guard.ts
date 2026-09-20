@@ -1,9 +1,14 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { Injectable, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 
-// Placeholder — full JWT strategy implemented in Step 2
 @Injectable()
-export class JwtAuthGuard implements CanActivate {
-  canActivate(_context: ExecutionContext): boolean {
-    return true;
+export class JwtAuthGuard extends AuthGuard('jwt') {
+  canActivate(context: ExecutionContext) {
+    return super.canActivate(context);
+  }
+
+  handleRequest<TUser = any>(err: any, user: TUser): TUser {
+    if (err || !user) throw new UnauthorizedException();
+    return user;
   }
 }
